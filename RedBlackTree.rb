@@ -379,7 +379,7 @@ class RedBlackTree
       replacement.parent = removed.parent
       
       #Give the removed node's color to the replacement node
-      replacement.color += Black
+      replacement.color += removed.color
       #If the replacement node is now double black, then the tree needs to be fixed
       fixup_delete(replacement, removed.parent) if replacement.color == BlackBlack
     end
@@ -398,7 +398,6 @@ class RedBlackTree
   @return nil
 =end
   def fixup_delete(error, parent)
-    
     #Keep going until the error node has a valid color
     while error.color == BlackBlack
       #Set the family pointers
@@ -641,5 +640,22 @@ end
 
 
 if __FILE__ == $0
+  tree = RedBlackTree.new
   
+  30.times do |i|
+    tree.insert i
+  end
+  puts tree
+  puts
+  tree.print_tree
+  
+  puts
+  puts
+  
+  7.times do |i|
+    tree.delete(i * 3)
+  end
+  puts tree
+  puts
+  tree.print_tree
 end
