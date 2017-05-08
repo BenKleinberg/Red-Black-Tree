@@ -71,12 +71,45 @@ class RedBlackTree
     @str = ""
   end
   
+=begin
+ Searches the tree for a given key
+ @param key the key to find in the tree
+ @return the first data that matches the key
+ @return nil if the key is not found 
+=end
   def search(key)
-    search_node(key).data
+    if key
+      node = search_node key
+      if node
+        val = node.data
+      end
+    end
+    
+    val
   end
   
 =begin
- Inserts the given data into the tree
+ Finds the data that is the successor of the given key
+ @param key the key to find the successor of
+ @return the data that is the successor
+ @return nil if the key is not found or there is no successor 
+=end
+  def successor(key)
+    if key
+      node = search_node key
+      if node
+        succ = successor_node node
+        if succ
+          val = succ.data
+        end
+      end
+    end
+    
+    val
+  end
+  
+=begin
+ Inserts the given data into the tree if it is not nil
  If the data in the tree cannot be compared to each other, errors will occur
  Marks the string representation as needing to be built
  @param data the data to be stored in the tree
@@ -86,8 +119,27 @@ class RedBlackTree
       insert_node(RedBlackNode.new(data))
       @str = ""
     end
+    
     self
   end
+  
+=begin
+ TODO 
+=end
+  def delete(key)
+    if key
+      node = search_node key
+      
+      if node
+        removed = delete_node node
+        data = removed.data
+        @str = ""
+      end
+    end
+    
+    data
+  end
+  
   
 =begin
   Recursively builds a string representing the tree if the string does not already exist
@@ -99,12 +151,18 @@ class RedBlackTree
     @str
   end
   
+=begin
+ Prints out the tree layer by layer including all leaf nodes
+ Shows the structure of the tree 
+=end
   def print_tree
     depth = 0
     while print_depth(@root, depth) > 0
       depth += 1
       puts
     end
+    
+    self
   end
   
   
@@ -134,7 +192,10 @@ class RedBlackTree
   end
   
 =begin
- TODO 
+ Searches for the node with the given key value
+ @param key the key value to search for
+ @return the first node with data that matches the key value
+ @return nil if no node is found
 =end
   def search_node(key)
     current = @root
@@ -147,7 +208,161 @@ class RedBlackTree
       end
     end
     
+    current = nil if current == RedBlackNode::Nil
     current
+  end
+  
+=begin
+ Finds the minimum node of a given subtree
+ @param node the root of the subtree to check
+ @return the node with the minimum value in the subtree
+=end
+  def min_node(node)
+    while node.left != RedBlackNode::Nil
+      node = node.left
+    end
+    
+    node
+  end
+  
+=begin
+ Finds the maximum node of a given subtree
+ @param node the root of the subtree to check
+ @return the node with the maximum value in the subtree
+=end
+  def max_node(node)
+    while node.right != RedBlackNode::Nil
+      node = node.right
+    end
+    
+    node
+  end
+  
+=begin
+  Finds the successor node of the given node
+  @param node the node to find the successor to
+  @return the node that is the successor
+  @return nil if there is no successor
+=end
+  def successor_node(node)
+    #If the node has a right child, the successor is the minimum node in the subtree rooted
+    #at the right child
+    if node.right != RedBlackNode::Nil
+      succ = min_node node.right
+      
+    #Otherwise, traverse up the tree until the the node is less than the parent, or the root
+    #is hit. The parent is the successor if the root is not hit.
+    else
+      parent = node.parent
+      while parent and node == parent.right
+        node = parent
+        parent = parent.parent
+      end
+      succ = parent
+    end
+    
+    succ
+  end
+  
+=begin
+ TODO 
+=end
+  def delete_node(node)
+    #If the left child does not exist, then the node itself is removed, and the replacement
+    #node is the right child
+    if node.left == RedBlackNode::Nil
+      removed = node
+      replacement = node.right
+      
+    #If the right child does not exist, then the node itself is removed, and the replacement
+    #node is the left child
+    elsif node.right == RedBlackNode::Nil
+      removed = node
+      replacement = node.left
+      
+    #If both children exist, then the successor node is removed, and the replacement node is
+    #the right child of the node that was removed
+    #The data is then swapped so the correct data is removed
+    else
+      removed = min_node(node.right)
+      replacement = removed.right
+      node.data, removed.data = removed.data, node.data
+    end
+    
+    #Replace the node to be removed with the replacement node
+    if removed.parent == nil
+      @root = replacement
+    elsif removed.parent.left == removed
+      removed.parent.left = replacement
+    else
+      removed.parent.right = replacement
+    end
+    replacement.parent = removed.parent
+    
+    #If the node that was removed is black, then the tree needs to be fixed
+    if removed.color == RedBlackNode::Black
+      #Give the removed node's color to the replacement node and then fix the tree
+      replacement.color = RedBlackNode::BlackBlack
+      fixup_delete(replacement, removed.parent)
+    end
+    
+    removed
+  end
+  
+=begin
+  TODO
+=end
+  def fixup_delete(error, parent)
+    
+    while error != @root and error.color == RedBlackNode::BlackBlack
+      #Set the family pointers
+      parent = error.parent if error.parent
+      if error == parent.left
+        sibling = parent.right
+        closer = sibling.left
+        further = sibling.right
+      else
+        sibling = parent.left
+        closer = sibling.right
+        further = sibling.left
+      end
+      
+      #Case 1: The sibling is red
+      #Rotate the parent towards the error node
+      #This will not fix the problem
+      if sibling.color == RedBlackNode::Red
+        rotate_edge(parent, sibling)
+        
+      #Case 2: The sibling is black with two black children
+      #Pull a black up to the parent
+      #The parent becomes the new error node
+      #This may fix the problem
+      elsif sibling.left.color != RedBlackNode::Red and sibling.right.color != RedBlackNode::Red
+        sibling.color = RedBlackNode::Red
+        error.color = RedBlackNode::Black
+        parent.color += RedBlackNode::Black
+        error = parent
+        
+      #Case 3: The sibling is black and the further niece is black
+      #Rotate the sibling away from the closer niece
+      #This will make the further niece red for case 4
+      elsif further.color != RedBlackNode::Red
+        rotate_edge(sibling, closer)
+        
+      #Case 4: The sibling is black and the further niece is red
+      #Give the error node's extra black to the further niece and rotate the parent
+      #node away from the sibling
+      #This will fix the problem
+      else
+        further.color = RedBlackNode::Black
+        error.color = RedBlackNode::Black
+        rotate_edge(parent, sibling)
+      end
+      
+    end
+    
+    #The root may have become double black from case two
+    @root.color = RedBlackNode::Black
   end
   
 =begin
@@ -192,7 +407,7 @@ class RedBlackTree
     end
     
   end
-  
+
 =begin
   Fixes the tree after an insertion based on the given error node
   Because nodes are inserted as red, only rule 4 can be broken
@@ -316,11 +531,20 @@ end
 if __FILE__ == $0
   
   tree = RedBlackTree.new
-  tree.insert 4
-  tree.insert 5
   tree.insert 3
+  tree.insert 1
+  tree.insert 10
+  tree.insert 0
   tree.insert 2
+  tree.insert(-1)
   puts tree
+  tree.print_tree
+  tree.delete 1
+  puts tree
+  tree.print_tree
+  tree.delete 10
+  puts tree
+  tree.print_tree
   #tree.print_tree
   
 end
